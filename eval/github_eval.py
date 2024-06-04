@@ -50,6 +50,18 @@ def run_tests(repo_path, test_dir):
         return result.returncode == 0
     return False
 
+def calculate_loc(repo_path):
+    total_loc = 0
+    for root, _, files in os.walk(repo_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    total_loc += sum(1 for _ in f)
+            except (UnicodeDecodeError, FileNotFoundError):
+                pass  # Skip files that can't be read
+    return total_loc
+
 def check_repo(repo_path):
     checks = {
         "README.md exists": check_file_exists(repo_path, "README.md"),
@@ -60,14 +72,18 @@ def check_repo(repo_path):
         "package.json exists": check_file_exists(repo_path, "package.json"),
         "No hardcoded secrets": not check_for_secrets(repo_path),
         "Linting passes": run_linter(repo_path, ".eslintrc.json"),
-        "Tests pass": run_tests(repo_path, "tests")
+        "Tests pass": run_tests(repo_path, "tests"),
+        "Total LOC": calculate_loc(repo_path)
     }
     return checks
 
 def print_results(repo_url, checks):
     print(f"Results for repository: {repo_url}")
     for check, result in checks.items():
-        print(f"{check}: {'PASSED' if result else 'FAILED'}")
+        if check == "Total LOC":
+            print(f"{check}: {result} lines")
+        else:
+            print(f"{check}: {'PASSED' if result else 'FAILED'}")
     print("\n")
 
 def main():
