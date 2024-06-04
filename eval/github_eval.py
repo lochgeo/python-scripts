@@ -62,6 +62,21 @@ def calculate_loc(repo_path):
                 pass  # Skip files that can't be read
     return total_loc
 
+def check_folder_structure(repo_path):
+    expected_structure = {
+        "artifacts": ["demo", "design"],
+        "code": ["src", "test"]
+    }
+    
+    for root_dir, sub_dirs in expected_structure.items():
+        root_path = os.path.join(repo_path, root_dir)
+        if not os.path.isdir(root_path):
+            return False
+        for sub_dir in sub_dirs:
+            if not os.path.isdir(os.path.join(root_path, sub_dir)):
+                return False
+    return True
+
 def check_repo(repo_path):
     checks = {
         "README.md exists": check_file_exists(repo_path, "README.md"),
@@ -73,7 +88,8 @@ def check_repo(repo_path):
         "No hardcoded secrets": not check_for_secrets(repo_path),
         "Linting passes": run_linter(repo_path, ".eslintrc.json"),
         "Tests pass": run_tests(repo_path, "tests"),
-        "Total LOC": calculate_loc(repo_path)
+        "Total LOC": calculate_loc(repo_path),
+        "Folder structure is correct": check_folder_structure(repo_path)
     }
     return checks
 
