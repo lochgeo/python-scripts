@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import subprocess
 from github import Github
+from dotenv import load_dotenv
 
 def download_repo(g, repo_url):
     repo_name = '/'.join(repo_url.rstrip('/').split('/')[-2:])
@@ -70,8 +71,9 @@ def print_results(repo_url, checks):
     print("\n")
 
 def main():
-    # GitHub token for authenticated requests
-    github_token = 'your_github_token_here'
+    # Load .env file
+    load_dotenv()
+    github_token = os.getenv('GITHUB_TOKEN')
     g = Github(github_token)
 
     repo_urls = [
