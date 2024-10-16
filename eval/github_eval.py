@@ -1,32 +1,41 @@
+import datetime
 import os
-import requests
-import zipfile
-import tempfile
 import shutil
 import subprocess
 from github import Github
 from dotenv import load_dotenv
+from git import Repo
+from pytz import timezone
+import stat
 
-def download_repo(g, repo_url):
-    repo_name = '/'.join(repo_url.rstrip('/').split('/')[-2:])
-    repo = g.get_repo(repo_name)
-    download_url = repo.get_archive_link('zipball')
-    response = requests.get(download_url)
-    if response.status_code == 200:
-        temp_dir = tempfile.mkdtemp()
-        zip_path = os.path.join(temp_dir, f"{repo_name.split('/')[-1]}.zip")
-        with open(zip_path, 'wb') as zip_file:
-            zip_file.write(response.content)
-        return temp_dir, zip_path
-    else:
-        print(f"Failed to download repository {repo_url}")
-        return None, None
+def calculate_score(checks):
+    total_checks = len(checks)
+    passed_checks = sum(1 for check in checks.values() if check)
+    return (passed_checks / total_checks) * 100
 
-def extract_zip(zip_path, extract_to):
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to)
-    extracted_folders = [os.path.join(extract_to, d) for d in os.listdir(extract_to) if os.path.isdir(os.path.join(extract_to, d))]
-    return extracted_folders[0] if extracted_folders else None
+def guess_language(repo):
+    languages = repo.get_languages()
+    return list(languages.keys())[0] if languages else None
+
+def count_commits(repo):
+    commits = repo.get_commits()
+    return len(list(commits))
+
+def check_commits_after_cutoff(repo):
+    tz = timezone('Asia/Kolkata')
+    cutoff = tz.localize(datetime.datetime(2024,10,19,9,0,0))
+    commits = repo.get_commits()
+
+    for commit in commits:
+        localtime = commit.commit.author.date.astimezone(tz)
+        if localtime > cutoff:
+            print(f"Commit SHA : {commit.sha}")
+            print(f"Author : {commit.commit.author.name}")
+            print(f"Date: {commit.commit.author.date}")
+            print(f"Message: {commit.commit.message}")  
+            return False
+    
+    return True
 
 def check_file_exists(repo_path, filename):
     return os.path.isfile(os.path.join(repo_path, filename))
@@ -37,18 +46,6 @@ def check_dir_exists(repo_path, dirname):
 def check_for_secrets(repo_path):
     result = subprocess.run(['grep', '-r', 'SECRET_KEY', repo_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return result.returncode == 0
-
-def run_linter(repo_path, linter_config_file):
-    if check_file_exists(repo_path, linter_config_file):
-        result = subprocess.run(['eslint', repo_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return result.returncode == 0
-    return False
-
-def run_tests(repo_path, test_dir):
-    if check_dir_exists(repo_path, test_dir):
-        result = subprocess.run(['pytest', test_dir], cwd=repo_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return result.returncode == 0
-    return False
 
 def calculate_loc(repo_path):
     total_loc = 0
@@ -64,8 +61,8 @@ def calculate_loc(repo_path):
 
 def check_folder_structure(repo_path):
     expected_structure = {
-        "artifacts": ["demo", "design"],
-        "code": ["src", "test"]
+        "artifacts": ["demo"],
+        "code": []
     }
     
     for root_dir, sub_dirs in expected_structure.items():
@@ -77,24 +74,19 @@ def check_folder_structure(repo_path):
                 return False
     return True
 
-def check_repo(repo_path):
+def check_repo(repo_path, github_repo):
     checks = {
+        "Programming Languages" : guess_language(github_repo),
         "README.md exists": check_file_exists(repo_path, "README.md"),
-        "LICENSE exists": check_file_exists(repo_path, "LICENSE"),
-        "Linting configuration exists": check_file_exists(repo_path, ".eslintrc.json"),
-        "Tests directory exists": check_dir_exists(repo_path, "tests"),
-        "CI configuration exists": check_file_exists(repo_path, ".github/workflows/main.yml"),
-        "package.json exists": check_file_exists(repo_path, "package.json"),
-        "No hardcoded secrets": not check_for_secrets(repo_path),
-        "Linting passes": run_linter(repo_path, ".eslintrc.json"),
-        "Tests pass": run_tests(repo_path, "tests"),
         "Total LOC": calculate_loc(repo_path),
-        "Folder structure is correct": check_folder_structure(repo_path)
+        "Folder structure is correct": check_folder_structure(repo_path),
+        "Total Commits": count_commits(github_repo),
+        "Commits after cutoff": check_commits_after_cutoff(github_repo)
     }
     return checks
 
-def print_results(repo_url, checks):
-    print(f"Results for repository: {repo_url}")
+def print_results(repo, checks):
+    print(f"Results for repository: {repo.full_name}")
     for check, result in checks.items():
         if check == "Total LOC":
             print(f"{check}: {result} lines")
@@ -102,6 +94,11 @@ def print_results(repo_url, checks):
             print(f"{check}: {'PASSED' if result else 'FAILED'}")
     print("\n")
 
+def remove_readonly(func, path, excinfo):
+    # Change the file to be writable and try again
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+    
 def main():
     # Load .env file
     load_dotenv()
@@ -119,12 +116,15 @@ def main():
         if repo.archived:
             continue
 
-        languages = repo.get_languages()
         local_path =  base_path + '/' + repo.name
+        
+        if os.path.exists(local_path):
+            shutil.rmtree(local_path, onerror=remove_readonly)
+
         Repo.clone_from(repo.ssh_url, local_path)
         checks = check_repo(local_path, repo)
-        print_results(repo_url, checks)
-        shutil.rmtree(temp_dir)
+        print_results(repo, checks)
+        shutil.rmtree(local_path, onerror=remove_readonly)
 
 if __name__ == "__main__":
     main()
