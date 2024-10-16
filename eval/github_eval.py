@@ -108,19 +108,23 @@ def main():
     github_token = os.getenv('GITHUB_TOKEN')
     g = Github(github_token)
 
-    repo_urls = [
-        "https://github.com/user/repo1",
-        "https://github.com/user/repo2"
-    ]
+    org_name = 'nitkhackathon2024'
+    base_path = 'repo/target'
 
-    for repo_url in repo_urls:
-        temp_dir, zip_path = download_repo(g, repo_url)
-        if zip_path:
-            repo_path = extract_zip(zip_path, temp_dir)
-            if repo_path:
-                checks = check_repo(repo_path)
-                print_results(repo_url, checks)
-            shutil.rmtree(temp_dir)
+    org = g.get_organization(org_name)
+
+    for repo in org.get_repos():
+        print(f"Processing: {repo.full_name}")
+
+        if repo.archived:
+            continue
+
+        languages = repo.get_languages()
+        local_path =  base_path + '/' + repo.name
+        Repo.clone_from(repo.ssh_url, local_path)
+        checks = check_repo(local_path, repo)
+        print_results(repo_url, checks)
+        shutil.rmtree(temp_dir)
 
 if __name__ == "__main__":
     main()
