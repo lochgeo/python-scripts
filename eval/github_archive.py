@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from github import Github
 
 def archive_org_repos(g, organization_name):
+    
+    #dont archive the template
+    exclude_list = ["nitkhackathon2024/nitk-hackathon-template"]
 
     try:
         # Get the organization
@@ -10,6 +13,11 @@ def archive_org_repos(g, organization_name):
 
         # Iterate through all repositories in the organization
         for repo in org.get_repos():
+
+            if repo.full_name in exclude_list:
+                print(f"Skipping repository: {repo.name} as it is in the exclude list")
+                continue
+                      
             if not repo.archived:
                 print(f"Archiving repository: {repo.name}")
                 try:
@@ -24,9 +32,6 @@ def archive_org_repos(g, organization_name):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-    finally:
-        # Close the Github instance
-        g.close()
 
 # Usage example
 if __name__ == "__main__":
@@ -38,3 +43,5 @@ if __name__ == "__main__":
     for org_name in orgs:
         print("processing", org_name)
         archive_org_repos(g, org_name)
+
+    g.close()
