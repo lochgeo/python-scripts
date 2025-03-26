@@ -4,8 +4,8 @@ from github import Github
 
 def archive_org_repos(g, organization_name):
     
-    #dont archive the template
-    exclude_list = ["nitkhackathon2024/nitk-hackathon-template"]
+    #dont archive the template & help repos
+    exclude_list = ["ewfx/hackathon-template", "ewfx/help", "ewfx/.github"]
 
     try:
         # Get the organization
@@ -35,7 +35,7 @@ def archive_org_repos(g, organization_name):
 
 # Usage example
 if __name__ == "__main__":
-    orgs = ["nitkhackathon2024"]
+    orgs = ["ewfx"]
     load_dotenv()
     github_token = os.getenv('GITHUB_TOKEN')
     g = Github(github_token)
