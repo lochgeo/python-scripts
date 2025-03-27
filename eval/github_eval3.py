@@ -201,7 +201,7 @@ def main():
         header = ['Repository Name', 'Programming Languages', 'README.md exists',
                   'README.md edited at least 2 times', 'README.md lines added',
                   'Total LOC', 'Folder structure is correct', 'Total Commits',
-                  'Commits after cutoff', 'Demo video/presentation exists',
+                  'No Commits after cutoff', 'Demo video/presentation exists',
                   'Arch document exists', 'Code src has non-md files',
                   'Code test has non-md files', 'Score']
         writer.writerow(header)
