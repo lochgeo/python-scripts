@@ -29,7 +29,7 @@ def get_repos_with_multiple_commits(org_name):
     # Iterate through each repository
     for repo in repos:
 
-        if repo.name in ['help', '.github', 'hackathon-template']
+        if repo.name in ['help', '.github', 'hackathon-template']:
             continue
 
         try:
