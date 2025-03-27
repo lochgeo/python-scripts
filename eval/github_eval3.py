@@ -148,7 +148,7 @@ def check_repo(repo_path, github_repo):
         "Programming Languages": guess_language(github_repo),
         "README.md exists": check_file_exists(repo_path, "README.md"),
         "README.md edited at least 2 times": check_readme_edits(github_repo),
-        "README.md lines added > 10": check_readme_lines_added(github_repo),
+        "README.md lines added": check_readme_lines_added(github_repo),
         "Total LOC": calculate_loc(repo_path),
         "Folder structure is correct": check_folder_structure(repo_path),
         "Total Commits": count_commits(github_repo),
@@ -199,7 +199,7 @@ def main():
         writer = csv.writer(csvfile)
         # Write the header row
         header = ['Repository Name', 'Programming Languages', 'README.md exists',
-                  'README.md edited at least 2 times', 'README.md lines added > 10 in last edit',
+                  'README.md edited at least 2 times', 'README.md lines added',
                   'Total LOC', 'Folder structure is correct', 'Total Commits',
                   'Commits after cutoff', 'Demo video/presentation exists',
                   'Arch document exists', 'Code src has non-md files',
